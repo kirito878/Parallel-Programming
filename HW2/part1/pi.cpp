@@ -6,31 +6,37 @@ pthread_mutex_t mutexsum;
 
 typedef struct
 {
+    int thread_id;
     int start_toss;
     int end_toss;
     long long int *hit_number;
-    int thread_id;
 } Arg_toss;
 
 void* calculate(void *args){
     Arg_toss *data = (Arg_toss *)args;
+
     int thread_id = data->thread_id;
     int start_toss = data->start_toss;
     int end_toss = data->end_toss;
     long long int *hitnumber = data->hit_number;
+
     long long int local_hit_number = 0;
 
     unsigned int seed = 8964 + thread_id;
 
     for (int i = start_toss; i < end_toss ;i++ ){
+
         double x = ((double) rand_r(&seed) / RAND_MAX) ;
         double y = ((double) rand_r(&seed) / RAND_MAX) ;
 
         double distance = x*x + y*y;
+        
         if (distance < 1.0){
             local_hit_number +=1;
         }
     }
+
+    
     pthread_mutex_lock(&mutexsum);
     *hitnumber += local_hit_number;
     pthread_mutex_unlock(&mutexsum);
@@ -45,7 +51,7 @@ int main(int argc, char *argv[])
     int pertoss = (numoftoss/ numofthread );
 
     pthread_t threads[numofthread];
-    Arg_toss arg[numofthread];
+    
 
 
     pthread_mutex_init(&mutexsum, NULL);
@@ -57,12 +63,13 @@ int main(int argc, char *argv[])
     long long int *hit_number = (long long int *) malloc(sizeof(*hit_number));
     *hit_number = 0; 
 
+    Arg_toss arg[numofthread];
     for (int i =0; i < numofthread ; i++){
+        arg[i].thread_id = i;
         arg[i].start_toss = pertoss*i;
         arg[i].end_toss = pertoss*(i+1);
         arg[i].hit_number = hit_number;
-        arg[i].thread_id = i;
-
+        
         pthread_create(&threads[i],&attr,calculate,(void *) &arg[i]);
     }
     pthread_attr_destroy(&attr);
